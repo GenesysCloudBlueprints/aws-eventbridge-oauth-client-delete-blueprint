@@ -2,39 +2,42 @@ import json
 import sys
 import os
 
-from pdpyras import APISession, PDClientError
-
-from model.oauth_client_delete import *
+from pagerduty import RestApiV2Client, Error
 from config import *
 
 def lambda_handler(event, context):
     print('Event Received: {}'.format(json.dumps(event)))
 
-    # unmarshal the event
-    awsEvent = Marshaller.unmarshall(event, 'AWSEvent')
-
-    #only process OAuthClient events
-    if 'OAuthClient' not in awsEvent.detail.topicName:
+    # Parse event directly as JSON
+    if 'detail' not in event:
+        return generate_return_body(400, 'Invalid event structure - missing detail')
+    
+    detail = event['detail']
+    
+    # Only process OAuthClient events
+    if 'OAuthClient' not in detail.get('topicName', ''):
         return generate_return_body(200, 'Not an OAuth Client event')
-
-    oauthClientEvent = awsEvent.detail.eventBody
+    
+    oauthClientEvent = detail.get('eventBody', {})
 
     # only respond to deleted clients
-    if oauthClientEvent.action != 'Delete':
+    if oauthClientEvent.get('action') != 'Delete':
         return generate_return_body(200, 'OAuth Client not deleted')
 
     deleteTime = ''
-    for propertyChange in oauthClientEvent.propertyChanges:
-        if propertyChange.property == 'deleted_on':
-            deleteTime = propertyChange.newValues[0]
+    for propertyChange in oauthClientEvent.get('propertyChanges', []):
+        if propertyChange.get('property') == 'deleted_on':
+            deleteTime = propertyChange.get('newValues', [''])[0]
+            break
 
-    print('{} has been deleted at {}'.format(oauthClientEvent.entity.name, deleteTime))
+    entity = oauthClientEvent.get('entity', {})
+    print('{} has been deleted at {}'.format(entity.get('name', 'Unknown'), deleteTime))
 
     try:
         # create a pager duty incident with the client id and deletion time
-        incident = notify_pager_duty(oauthClientEvent.entity.id, deleteTime)
-        print('PagerDuty incident with ID {} has been created'.format(incident.id))
-    except PDClientError as e:
+        incident = notify_pager_duty(entity.get('id', 'Unknown'), deleteTime, pager_duty_service_id)
+        print('PagerDuty incident with ID {} has been created'.format(entity.get('id', 'Unknown')))
+    except Error as e:
         if e.response:
             return generate_return_body(e.response.status_code, e.response.msg)
         else:
@@ -42,8 +45,8 @@ def lambda_handler(event, context):
 
     return generate_return_body(200, 'PagerDuty incident created')
 
-def notify_pager_duty(oauth_client_id, deleted_on):
-    session = APISession(pager_duty_token)
+def notify_pager_duty(oauth_client_id, deleted_on, service_id):
+    session = RestApiV2Client(pager_duty_api_key)
 
     details = 'OAuth Client with ID {} has been deleted at {}'.format(oauth_client_id, deleted_on)
 
@@ -51,7 +54,7 @@ def notify_pager_duty(oauth_client_id, deleted_on):
         'type': 'incident',
         'title': 'OAuth Client Deleted',
         'service': {
-            'id': oauth_client_id,
+            'id': service_id,
             'type': 'service_reference'
         },
         'body': {
