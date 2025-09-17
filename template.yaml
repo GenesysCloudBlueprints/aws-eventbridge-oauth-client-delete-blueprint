@@ -23,6 +23,13 @@ Parameters:
     MinLength: 1
     MaxLength: 256
     Description: Name of the Amazon EventBridge SaaS Partner Event Source to associate with an Event Bus. For example, aws.partner/example.com/1234567890/test-event-source.
+  PagerDutyToken:
+    Type: String
+    NoEcho: true
+    Description: PagerDuty API token for creating incidents
+  PagerDutyServiceId:
+    Type: String
+    Description: PagerDuty Service ID for incidents
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -35,8 +42,12 @@ Resources:
     Properties:
       CodeUri: src/python
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       Timeout: 10
+      Environment:
+        Variables:
+          PAGER_DUTY_TOKEN: !Ref PagerDutyToken
+          PAGER_DUTY_SERVICE_ID: !Ref PagerDutyServiceId
       Events:
         EventBridgeRule:
           Type: EventBridgeRule
@@ -51,8 +62,12 @@ Resources:
     Properties:
       CodeUri: ./src/typescript
       Handler: dist/app.lambdaHandler
-      Runtime: nodejs14.x
+      Runtime: nodejs20.x
       Timeout: 10
+      Environment:
+        Variables:
+          PAGER_DUTY_TOKEN: !Ref PagerDutyToken
+          PAGER_DUTY_SERVICE_ID: !Ref PagerDutyServiceId
       Events:
         EventBridgeRule:
           Type: EventBridgeRule

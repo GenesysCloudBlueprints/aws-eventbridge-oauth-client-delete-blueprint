@@ -34,31 +34,38 @@ export const lambdaHandler = async (
 
     try {
         // create a pager duty incident with the client id and deletion time
-        const incident = await notifyPagerDuty(oauthClientEvent.entity.id, deleteTime)
-        console.log(`PagerDuty incident with ID ${incident.resource.id} has been created`)
+        const incident = await notifyPagerDuty(oauthClientEvent.entity.id, deleteTime, config.pagerDutyServiceId)
+        console.log("Status:", incident.status);
+        console.log("Data:", incident.data);
+        console.log(`PagerDuty incident has been created....`)
     } catch (err) {
+        console.error(`Failed to create PagerDuty incident: ${err}`)
         return generateReturnBody(500, err.statusText)
     }
 
     return generateReturnBody(200, 'PagerDuty incident created')
 }
 
-const notifyPagerDuty = async (oauthClientId : string, deletedOn: string) : Promise<APIResponse> => {
-    const pd = api({token: config.pagerDutyToken})
+const notifyPagerDuty = async (oauthClientId : string, deletedOn: string, serviceId: string) : Promise<APIResponse> => {
+    const pd = api({token: config.pagerDutyApiKey})
 
     const details = `OAuth Client with ID ${oauthClientId} has been deleted at ${deletedOn}`
     const payload = {
-        'type': 'incident',
-        'title': 'OAuth Client Deleted',
-        'service': {
-            'id': oauthClientId,
-            'type': 'service_reference'
-        },
-        'body': {
-            'type': 'incident_body',
-            'details': details
-        },
+        'incident': {
+            'type': 'incident',
+            'title': 'OAuth Client Deleted',
+            'service': {
+                'id': serviceId,
+                'type': 'service_reference'
+            },
+            'body': {
+                'type': 'incident_body',
+                'details': details
+            }
+        }
     }
+
+    console.log(`Creating PagerDuty incident with payload: ${JSON.stringify(payload, null, 2)}`)
 
     return await pd.post('/incidents', { data: payload })
 }
