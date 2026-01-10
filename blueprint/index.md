@@ -8,6 +8,13 @@ category: 6
 summary: |
   This Genesys Cloud Developer Blueprint provides an example of a Lambda function that creates a PagerDuty incident in response to OAuth client deletes. This blueprint includes a SAM template with Typescript and Python Lambda functions for the CloudFormation stack used in this blueprint.
 ---
+:::{"alert":"primary","title":"About Genesys Cloud Blueprints","autoCollapse":false} 
+Genesys Cloud blueprints were built to help you jump-start building an application or integrating with a third-party partner. 
+Blueprints are meant to outline how to build and deploy your solutions, not a production-ready turn-key solution.
+ 
+For more details on Genesys Cloud blueprint support and practices 
+please see our Genesys Cloud blueprint [FAQ](https://developer.genesys.cloud/blueprints/faq)sheet.
+:::
 
 This Genesys Cloud Developer Blueprint provides an example of a Lambda function that creates a PagerDuty incident in response to OAuth client deletes. This blueprint includes a SAM template with Typescript and Python Lambda functions for the CloudFormation stack used in this blueprint.
 
